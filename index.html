@@ -15,12 +15,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <style>
-        /* BATMAN AESTHETIC CSS */
+        /* BATMAN VISUALS */
         body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
         
-        /* Video & Canvas Layers */
-        #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transform: scaleX(-1); /* Mirror effect for selfie mode if needed, remove if using back cam */ }
-        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; transform: scaleX(-1); }
+        /* Video & Canvas (No Transform = Fixed Navigation) */
+        #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
 
         /* HUD Overlay */
         #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
@@ -42,7 +42,7 @@
         }
         @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 
-        /* Vignette for gritty look */
+        /* Dark Vignette for "Helmet" feel */
         .vignette {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, transparent 60%, black 100%);
@@ -73,16 +73,24 @@
         const ctx = canvas.getContext('2d');
         let model = null;
 
-        // 1. SETUP CAMERA (Back Camera Preferred)
+        // 1. SETUP CAMERA (Fixed Zoom & Navigation)
         async function setupCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }, 
+                    video: { 
+                        facingMode: 'environment',
+                        // Request Widescreen (1080p) to fix the "Zoomed In" look
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 } 
+                    }, 
                     audio: false
                 });
                 video.srcObject = stream;
                 return new Promise((resolve) => {
-                    video.onloadedmetadata = () => resolve(video);
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve(video);
+                    };
                 });
             } catch (error) {
                 status.innerText = "CAMERA ACCESS DENIED\nCHECK PERMISSIONS";
@@ -99,6 +107,7 @@
 
         // 3. REAL-TIME DETECTION LOOP
         async function detectFrame() {
+            // Match canvas to video resolution
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
@@ -109,18 +118,35 @@
             predictions.forEach(prediction => {
                 // --- BATMAN LOGIC START ---
                 
-                let label = prediction.class.toUpperCase();
+                let rawLabel = prediction.class.toUpperCase();
+                let category = "OBJECT"; 
                 let color = "#00f7ff"; // Default Cyan
 
-                // Rename Boring Objects
-                if (label === "PERSON") { label = "UNIDENTIFIED SUBJECT"; color = "#ff3333"; } // RED for people
-                else if (label === "CELL PHONE") { label = "DEVICE DETECTED"; }
-                else if (label === "LAPTOP") { label = "MAINFRAME TERMINAL"; }
-                else if (label === "CUP") { label = "UNKNOWN SUBSTANCE"; }
-                else if (label === "KEYBOARD") { label = "INPUT CONSOLE"; }
-                else if (label === "MOUSE") { label = "PERIPHERAL"; }
-                else if (label === "BOTTLE") { label = "LIQUID CONTAINER"; }
+                // Define Categories
+                const animals = ["BIRD", "CAT", "DOG", "HORSE", "SHEEP", "COW", "ELEPHANT", "BEAR", "ZEBRA", "GIRAFFE"];
+                const vehicles = ["BICYCLE", "CAR", "MOTORCYCLE", "AIRPLANE", "BUS", "TRAIN", "TRUCK", "BOAT"];
+                const weapons = ["KNIFE", "SCISSORS", "BASEBALL BAT"];
                 
+                // Logic: Assign Category & Color
+                if (rawLabel === "PERSON") {
+                    category = "HUMAN";
+                    color = "#ff3333"; // Red for Threat
+                } 
+                else if (animals.includes(rawLabel)) {
+                    category = "ANIMAL";
+                    color = "#00ff00"; // Green for Bio
+                }
+                else if (vehicles.includes(rawLabel)) {
+                    category = "VEHICLE";
+                }
+                else if (weapons.includes(rawLabel)) {
+                    category = "WEAPON";
+                    color = "#ff3333"; // Red for Threat
+                }
+
+                // Create the Label (e.g., "HUMAN: PERSON")
+                let displayLabel = category + ": " + rawLabel;
+
                 // Draw Box
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
@@ -128,21 +154,19 @@
                 ctx.shadowColor = color;
                 ctx.strokeRect(prediction.bbox[0], prediction.bbox[1], prediction.bbox[2], prediction.bbox[3]);
 
-                // Draw Corner Accents (Tactical Look)
+                // Text Background
                 const x = prediction.bbox[0];
                 const y = prediction.bbox[1];
-                const w = prediction.bbox[2];
-                const h = prediction.bbox[3];
+                const textWidth = ctx.measureText(displayLabel).width; // Dynamic width
                 
-                // Draw Label Background
                 ctx.fillStyle = color === "#ff3333" ? "rgba(255, 0, 0, 0.2)" : "rgba(0, 247, 255, 0.2)";
-                ctx.fillRect(x, y - 25, w, 25);
+                ctx.fillRect(x, y - 25, Math.max(textWidth + 60, prediction.bbox[2]), 25);
 
-                // Draw Label Text
+                // Draw Text
                 ctx.fillStyle = color;
                 ctx.font = "bold 14px 'Courier New'";
                 ctx.fillText(
-                    label + " [" + Math.round(prediction.score * 100) + "%]",
+                    displayLabel + " [" + Math.round(prediction.score * 100) + "%]",
                     x + 5,
                     y - 7
                 );
@@ -152,7 +176,7 @@
             requestAnimationFrame(detectFrame);
         }
 
-        // Start System
+        // Boot Up
         setupCamera().then(() => {
             status.innerHTML = "LOADING NEURAL NET...<br><span style='font-size:10px'>DECRYPTING ALGORITHMS</span>";
             loadModel();
