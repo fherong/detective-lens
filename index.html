@@ -3,446 +3,581 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WayneTech OS v4</title>
-
+    <title>WayneTech OS v5</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png">
-
+    <meta name="theme-color" content="#000000">
+    
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-    <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <style>
-        :root { --primary: #00f7ff; --alert: #ff3333; --bg: #050505; --panel: rgba(0, 20, 20, 0.9); }
-        body { margin: 0; background-color: var(--bg); font-family: 'Courier New', monospace; overflow: hidden; color: var(--primary); }
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-
-        /* UI SHELL */
-        #active-viewport { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: flex; flex-direction: column; }
+        :root { --primary: #00f7ff; --alert: #ff3333; --bg: #000000; --panel: rgba(10, 15, 15, 0.95); }
+        body { margin: 0; background: var(--bg); font-family: 'Courier New', monospace; color: var(--primary); overflow: hidden; user-select: none; }
         
-        .top-bar {
-            height: 60px; display: flex; align-items: center; justify-content: space-between;
-            background: rgba(0,0,0,0.9); border-bottom: 2px solid var(--primary); padding: 0 20px; z-index: 10;
+        /* LAYOUT */
+        #viewport { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .screen { display: none; flex-direction: column; width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: #000; }
+        .active { display: flex; }
+        
+        /* HEADER */
+        .header { height: 60px; border-bottom: 2px solid var(--primary); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; background: rgba(0,0,0,0.9); z-index: 10; }
+        .title { font-weight: bold; letter-spacing: 2px; }
+        .back-btn { background: #110000; border: 1px solid var(--alert); color: var(--alert); padding: 5px 10px; font-weight: bold; cursor: pointer; }
+        
+        /* MENU FAB (Bottom Right) */
+        #menu-btn { 
+            position: absolute; bottom: 30px; right: 30px; width: 65px; height: 65px; 
+            border-radius: 50%; background: #000; border: 2px solid var(--primary); 
+            color: var(--primary); font-size: 24px; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.4); z-index: 100; cursor: pointer; transition: 0.2s;
         }
-        .close-btn { border: 1px solid var(--alert); color: var(--alert); background: transparent; padding: 5px 15px; font-weight: bold; }
-
-        /* MENU FAB */
-        #menu-fab {
-            position: absolute; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%;
-            border: 2px solid var(--primary); background: rgba(0,0,0,0.8); color: var(--primary);
-            display: flex; justify-content: center; align-items: center; font-size: 24px; z-index: 999;
-            box-shadow: 0 0 15px rgba(0, 247, 255, 0.3); transition: transform 0.2s;
-        }
-        #menu-fab:active { transform: scale(0.9); background: var(--primary); color: #000; }
+        #menu-btn:active { transform: scale(0.9); background: var(--primary); color: #000; }
 
         /* APP DRAWER */
-        #app-drawer {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 70%;
-            background: var(--panel); border-top: 2px solid var(--primary);
-            z-index: 998; transform: translateY(110%); transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-            padding: 20px; border-radius: 20px 20px 0 0; display: flex; flex-direction: column;
+        #drawer {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 85%; background: var(--panel);
+            border-top: 2px solid var(--primary); z-index: 99; transform: translateY(110%);
+            transition: transform 0.3s ease; padding: 20px; border-radius: 20px 20px 0 0;
+            display: flex; flex-direction: column;
         }
-        #app-drawer.open { transform: translateY(0); }
-
-        .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow-y: auto; }
-        .app-icon {
-            aspect-ratio: 1; border: 1px solid #004444; background: rgba(0,0,0,0.5);
+        #drawer.open { transform: translateY(0); }
+        
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow-y: auto; padding-bottom: 50px; }
+        .icon { 
+            aspect-ratio: 1; border: 1px solid #003333; background: rgba(0,0,0,0.6); 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-size: 9px; text-align: center; color: var(--primary); cursor: pointer;
         }
-        .app-icon i { font-size: 20px; margin-bottom: 5px; display: block; }
-        .app-icon:active { background: var(--primary); color: #000; }
+        .icon i { font-size: 22px; margin-bottom: 5px; display: block; }
+        .icon:active { background: var(--primary); color: #000; }
 
-        /* SHARED COMPONENTS */
-        video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        .tool-ui { position: absolute; top: 60px; left: 0; width: 100%; height: calc(100% - 60px); padding: 20px; overflow-y: auto; background: #000; }
-        .overlay-ui { position: absolute; bottom: 20px; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
+        /* TOOLS COMMON */
+        video, canvas { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+        .controls { position: absolute; bottom: 100px; width: 100%; padding: 20px; text-align: center; pointer-events: none; }
+        .controls > * { pointer-events: auto; }
+        input, select, textarea { width: 100%; background: #111; border: 1px solid var(--primary); color: var(--primary); padding: 10px; margin-bottom: 10px; font-family: inherit; }
+        .btn { width: 100%; background: rgba(0,247,255,0.1); border: 1px solid var(--primary); color: var(--primary); padding: 15px; font-weight: bold; cursor: pointer; }
+        .btn:active { background: var(--primary); color: #000; }
         
-        input, textarea, select {
-            width: 100%; background: #111; border: 1px solid var(--primary); color: var(--primary);
-            padding: 10px; margin: 5px 0 15px 0; font-family: inherit; font-size: 16px;
-        }
-        button.action {
-            width: 100%; padding: 15px; background: rgba(0, 247, 255, 0.1); border: 1px solid var(--primary);
-            color: var(--primary); font-weight: bold; margin-bottom: 10px;
-        }
-        button.action:active { background: var(--primary); color: #000; }
+        .data-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 12px 0; font-size: 14px; }
         
-        /* DATA DISPLAY */
-        .log-box { font-size: 12px; border: 1px solid #333; padding: 10px; min-height: 50px; text-align: left; white-space: pre-wrap; }
+        /* Flashbang specific */
+        #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: none; }
+
+        /* Level specific */
+        .bubble-container { width: 200px; height: 200px; border: 2px solid var(--primary); border-radius: 50%; margin: 50px auto; position: relative; }
+        .bubble { width: 20px; height: 20px; background: var(--primary); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: 0.1s; }
     </style>
 </head>
 <body>
 
-    <div id="active-viewport">
-        <div style="display:flex; height:100%; justify-content:center; align-items:center; flex-direction:column; background: radial-gradient(circle, #111 0%, #000 100%);">
-            <h1 style="text-shadow: 0 0 15px var(--primary);">WAYNETECH</h1>
-            <small>OS v4.0 // OPTIMIZED KERNEL</small>
-            <div style="margin-top:20px; font-size:12px; opacity:0.6;">SYSTEM STANDBY</div>
+    <div id="viewport">
+        <div id="home-screen" class="screen active" style="justify-content:center; align-items:center;">
+            <h1>WAYNETECH</h1>
+            <small>OS v5.0 // ONLINE</small>
+            <div style="margin-top:20px; font-size:10px; opacity:0.5;">SELECT GADGET FROM MENU</div>
         </div>
+
+        <div id="app-detective" class="screen">
+            <div class="header"><span class="title">DETECTIVE</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <video id="det-vid" autoplay playsinline muted></video>
+            <canvas id="det-can"></canvas>
+            <div class="controls" style="bottom: 20px; background: rgba(0,0,0,0.7);">
+                <label>SENSITIVITY: <span id="det-val">60%</span></label>
+                <input type="range" min="1" max="99" value="60" oninput="updateThresh(this.value)" style="width:100%;">
+            </div>
+        </div>
+
+        <div id="app-vocoder" class="screen">
+            <div class="header"><span class="title">VOCODER</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding: 20px; height:100%; overflow-y:auto;">
+                <button class="btn" onclick="startListen()" id="mic-btn">🎙️ TAP TO SPEAK (LISTEN)</button>
+                <textarea id="voc-in" placeholder="Or type here..." style="height:80px; margin-top:10px;"></textarea>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <select id="voc-lang">
+                        <option value="es">SPANISH</option>
+                        <option value="fr">FRENCH</option>
+                        <option value="ja">JAPANESE</option>
+                        <option value="de">GERMAN</option>
+                        <option value="ru">RUSSIAN</option>
+                        <option value="zh">CHINESE</option>
+                    </select>
+                    <button class="btn" onclick="translateAndSpeak()">TRANSLATE</button>
+                </div>
+
+                <div id="voc-out" style="border:1px solid #333; padding:10px; margin-top:20px; min-height:100px; color:#fff;">Translation will appear here...</div>
+            </div>
+        </div>
+
+        <div id="app-flash" class="screen" onclick="triggerFlash()">
+            <div class="header"><span class="title">FLASHBANG</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="display:flex; justify-content:center; align-items:center; height:100%; text-align:center;">
+                <h1>TAP SCREEN<br>TO DETONATE</h1>
+            </div>
+        </div>
+        <div id="flash-overlay"></div>
+
+        <div id="app-sonar" class="screen">
+            <div class="header"><span class="title">SONAR</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <canvas id="sonar-can"></canvas>
+        </div>
+
+        <div id="app-qr" class="screen">
+            <div class="header"><span class="title">QR INTEL</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <video id="qr-vid" autoplay playsinline muted></video>
+            <div class="controls" style="background:black; color:white;">DATA: <span id="qr-res">SCANNING...</span></div>
+        </div>
+
+        <div id="app-nv" class="screen">
+            <div class="header"><span class="title">NIGHT VIS</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <video id="nv-vid" autoplay playsinline muted style="filter: sepia(100%) hue-rotate(90deg) contrast(200%) brightness(150%) grayscale(20%);"></video>
+        </div>
+
+        <div id="app-gps" class="screen">
+            <div class="header"><span class="title">GPS UPLINK</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px;">
+                <div class="data-row"><span>LATITUDE</span><span id="gps-lat">SCANNING...</span></div>
+                <div class="data-row"><span>LONGITUDE</span><span id="gps-lon">SCANNING...</span></div>
+                <div class="data-row"><span>ALTITUDE</span><span id="gps-alt">---</span></div>
+                <div class="data-row"><span>SPEED</span><span id="gps-spd">---</span></div>
+                <div class="data-row"><span>ACCURACY</span><span id="gps-acc">---</span></div>
+            </div>
+        </div>
+
+        <div id="app-level" class="screen">
+            <div class="header"><span class="title">GYRO LEVEL</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div class="bubble-container"><div id="bubble-dot" class="bubble"></div></div>
+            <div style="text-align:center;">X: <span id="tilt-x">0</span> | Y: <span id="tilt-y">0</span></div>
+        </div>
+
+        <div id="app-cipher" class="screen">
+            <div class="header"><span class="title">CIPHER</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px;">
+                <textarea id="c-in" placeholder="Message to encrypt..."></textarea>
+                <button class="btn" onclick="doCipher()">ENCRYPT / DECRYPT (ROT13)</button>
+                <textarea id="c-out" readonly placeholder="Result..."></textarea>
+            </div>
+        </div>
+
+        <div id="app-morse" class="screen">
+            <div class="header"><span class="title">MORSE TX</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px;">
+                <input id="m-in" placeholder="Enter SOS...">
+                <button class="btn" onclick="txMorse()">TRANSMIT (FLASH)</button>
+            </div>
+        </div>
+
+        <div id="app-noise" class="screen">
+            <div class="header"><span class="title">JAMMER</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px; text-align:center;">
+                <button class="btn" style="height:200px; border-radius:50%;" id="noise-btn" onclick="toggleNoise()">ACTIVATE</button>
+            </div>
+        </div>
+
+        <div id="app-bat" class="screen">
+            <div class="header"><span class="title">POWER</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px;">
+                <h1 id="bat-lvl" style="font-size:80px; text-align:center;">...%</h1>
+                <div style="text-align:center;" id="bat-st">STATUS: UNKNOWN</div>
+            </div>
+        </div>
+
+        <div id="app-compass" class="screen">
+            <div class="header"><span class="title">COMPASS</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="font-size:60px; text-align:center; margin-top:100px;" id="comp-val">---</div>
+            <div style="text-align:center;">DEGREES</div>
+        </div>
+
+        <div id="app-seismo" class="screen">
+            <div class="header"><span class="title">SEISMIC</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px; text-align:center;">
+                <div style="font-size:40px;" id="seis-val">0.00</div>
+                <div>G-FORCE VIBRATION</div>
+            </div>
+        </div>
+
+        <div id="app-net" class="screen">
+            <div class="header"><span class="title">NETWORK</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px;">
+                <div class="data-row"><span>TYPE</span><span id="net-type">...</span></div>
+                <div class="data-row"><span>DOWNLINK</span><span id="net-down">...</span></div>
+                <div class="data-row"><span>RTT</span><span id="net-rtt">...</span></div>
+                <button class="btn" onclick="checkNet()" style="margin-top:20px;">REFRESH</button>
+            </div>
+        </div>
+
+        <div id="app-timer" class="screen">
+            <div class="header"><span class="title">CHRONO</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="font-size:60px; text-align:center; margin-top:50px;" id="timer-val">00:00.00</div>
+            <div style="padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button class="btn" onclick="timerToggle()">START/STOP</button>
+                <button class="btn" onclick="timerReset()">RESET</button>
+            </div>
+        </div>
+
+        <div id="app-tally" class="screen">
+            <div class="header"><span class="title">TALLY</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="font-size:100px; text-align:center; margin-top:20px;" id="cnt-val">0</div>
+            <button class="btn" style="height:100px;" onclick="document.getElementById('cnt-val').innerText++">COUNT</button>
+            <button class="btn" onclick="document.getElementById('cnt-val').innerText=0">RESET</button>
+        </div>
+
+        <div id="app-dice" class="screen">
+            <div class="header"><span class="title">RNG</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="font-size:100px; text-align:center; margin-top:20px;" id="rng-val">?</div>
+            <div style="padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button class="btn" onclick="document.getElementById('rng-val').innerText=Math.floor(Math.random()*6)+1">D6</button>
+                <button class="btn" onclick="document.getElementById('rng-val').innerText=Math.floor(Math.random()*20)+1">D20</button>
+            </div>
+        </div>
+
+        <div id="app-notes" class="screen">
+            <div class="header"><span class="title">LOGS</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px;">
+                <textarea id="note-in" placeholder="Enter log..." style="height:100px;"></textarea>
+                <button class="btn" onclick="saveNote()">SAVE</button>
+                <div id="note-list" style="margin-top:20px;"></div>
+            </div>
+        </div>
+
+        <div id="app-unit" class="screen">
+            <div class="header"><span class="title">CONVERT</span><button class="back-btn" onclick="closeApp()">EXIT</button></div>
+            <div style="padding:20px;">
+                <input type="number" id="unit-in" placeholder="Meters">
+                <button class="btn" onclick="document.getElementById('unit-res').innerText=(document.getElementById('unit-in').value*3.28084).toFixed(2)+' FT'">TO FEET</button>
+                <div id="unit-res" style="font-size:30px; text-align:center; margin-top:20px;">0 FT</div>
+            </div>
+        </div>
+
     </div>
 
-    <div id="menu-fab" onclick="toggleDrawer()">☰</div>
+    <div id="menu-btn" onclick="toggleDrawer()">☰</div>
 
-    <div id="app-drawer">
-        <div style="text-align:center; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">GADGET SELECT</div>
-        <div class="drawer-grid">
-            <div class="app-icon" onclick="launch('detective')"><i>👁️</i>DETECTIVE</div>
-            <div class="app-icon" onclick="launch('vocoder')"><i>🗣️</i>VOCODER</div>
-            <div class="app-icon" onclick="launch('nightvis')"><i>🌑</i>NIGHT VIS</div>
-            <div class="app-icon" onclick="launch('sonar')"><i>📡</i>SONAR</div>
-            <div class="app-icon" onclick="launch('crypto')"><i>🔐</i>DECRYPT</div>
-            <div class="app-icon" onclick="launch('gps')"><i>🛰️</i>GPS</div>
-            <div class="app-icon" onclick="launch('flash')"><i>💣</i>FLASHBANG</div>
-            <div class="app-icon" onclick="launch('reflex')"><i>⚡</i>REFLEX</div>
-            <div class="app-icon" onclick="launch('status')"><i>🔋</i>STATUS</div>
-            <div class="app-icon" onclick="launch('jammer')"><i>🔊</i>JAMMER</div>
+    <div id="drawer">
+        <div style="text-align:center; margin-bottom:10px;">GADGET SELECT</div>
+        <div class="grid">
+            <div class="icon" onclick="launch('detective')"><i>👁️</i>DETECTIVE</div>
+            <div class="icon" onclick="launch('vocoder')"><i>🗣️</i>VOCODER</div>
+            <div class="icon" onclick="launch('flash')"><i>💣</i>FLASHBANG</div>
+            <div class="icon" onclick="launch('sonar')"><i>📡</i>SONAR</div>
+            <div class="icon" onclick="launch('qr')"><i>🔳</i>QR SCAN</div>
+            <div class="icon" onclick="launch('nv')"><i>🌑</i>NIGHT VIS</div>
+            <div class="icon" onclick="launch('gps')"><i>🛰️</i>GPS</div>
+            <div class="icon" onclick="launch('level')"><i>⚖️</i>LEVEL</div>
+            <div class="icon" onclick="launch('cipher')"><i>🔐</i>CIPHER</div>
+            <div class="icon" onclick="launch('morse')"><i>🔦</i>MORSE</div>
+            <div class="icon" onclick="launch('noise')"><i>🔊</i>JAMMER</div>
+            <div class="icon" onclick="launch('bat')"><i>🔋</i>POWER</div>
+            <div class="icon" onclick="launch('compass')"><i>🧭</i>COMPASS</div>
+            <div class="icon" onclick="launch('seismo')"><i>📉</i>SEISMIC</div>
+            <div class="icon" onclick="launch('net')"><i>🌐</i>NET</div>
+            <div class="icon" onclick="launch('timer')"><i>⏱️</i>CHRONO</div>
+            <div class="icon" onclick="launch('tally')"><i>🔢</i>TALLY</div>
+            <div class="icon" onclick="launch('dice')"><i>🎲</i>RNG</div>
+            <div class="icon" onclick="launch('notes')"><i>📝</i>LOGS</div>
+            <div class="icon" onclick="launch('unit')"><i>📐</i>UNITS</div>
         </div>
     </div>
 
     <script>
         // === CORE SYSTEM ===
-        const viewport = document.getElementById('active-viewport');
-        const drawer = document.getElementById('app-drawer');
-        let currentProcess = null; // Stores clean-up function
+        let stream = null;
+        let loop = null;
+        let audioCtx = null;
+        let watchId = null;
 
-        function toggleDrawer() { drawer.classList.toggle('open'); }
+        function toggleDrawer() { document.getElementById('drawer').classList.toggle('open'); }
 
-        async function launch(appId) {
-            if (currentProcess) currentProcess();
-            currentProcess = null;
-
-            toggleDrawer(); 
-            viewport.innerHTML = `<div class="top-bar"><span>${appId.toUpperCase()}</span><button class="close-btn" onclick="exitApp()">EXIT</button></div>`;
-            
-            if(appId === 'detective') startDetective();
-            else if(appId === 'vocoder') startVocoder();
-            else if(appId === 'nightvis') startCamera('sepia(100%) hue-rotate(90deg) contrast(200%) brightness(150%)');
-            else if(appId === 'sonar') startSonar();
-            else if(appId === 'crypto') startCrypto();
-            else if(appId === 'gps') startGPS();
-            else if(appId === 'flash') startFlash();
-            else if(appId === 'reflex') startReflex();
-            else if(appId === 'status') startStatus();
-            else if(appId === 'jammer') startJammer();
+        function closeApp() {
+            stopHardware();
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('home-screen').classList.add('active');
         }
 
-        function exitApp() {
-            if (currentProcess) currentProcess();
-            currentProcess = null;
-            viewport.innerHTML = `<div style="display:flex; height:100%; justify-content:center; align-items:center; flex-direction:column; background: #000;"><h1 style="color:#333;">STANDBY</h1></div>`;
+        function launch(app) {
+            closeApp();
+            document.getElementById('home-screen').classList.remove('active');
+            document.getElementById('app-' + app).classList.add('active');
+            toggleDrawer();
+
+            if(app === 'detective') initDetective();
+            if(app === 'qr') initQR();
+            if(app === 'nv') initCam('nv-vid');
+            if(app === 'sonar') initSonar();
+            if(app === 'gps') initGPS();
+            if(app === 'level') initLevel();
+            if(app === 'bat') initBat();
+            if(app === 'compass') initCompass();
+            if(app === 'seismo') initSeismo();
+            if(app === 'net') checkNet();
+            if(app === 'notes') loadNotes();
         }
 
-        // === HARDWARE HELPER ===
-        async function getCamera() {
-            const video = document.createElement('video');
-            video.setAttribute('playsinline', '');
-            video.muted = true;
-            viewport.appendChild(video);
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                video.srcObject = stream;
-                await video.play();
-                return { video, stream };
-            } catch(e) { alert("Camera Access Denied"); return null; }
+        function stopHardware() {
+            if(stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            if(loop) { cancelAnimationFrame(loop); clearInterval(loop); loop = null; }
+            if(audioCtx) { audioCtx.close(); audioCtx = null; }
+            if(watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+            document.getElementById('flash-overlay').style.display = 'none';
         }
 
-        // ============================================
-        // === APP: VOCODER (Translate & OCR) ===
-        // ============================================
-        function startVocoder() {
-            // Inject UI
-            const container = document.createElement('div');
-            container.className = 'tool-ui';
-            container.innerHTML = `
-                <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <button class="action" onclick="vocoderMode('text')" id="btn-mode-text">TEXT INPUT</button>
-                    <button class="action" onclick="vocoderMode('cam')" id="btn-mode-cam">LIVE CAM</button>
-                </div>
-                
-                <div id="vocoder-text-ui">
-                    <textarea id="v-input" placeholder="Type text to translate..."></textarea>
-                    <select id="v-lang">
-                        <option value="es">SPANISH</option>
-                        <option value="fr">FRENCH</option>
-                        <option value="ja">JAPANESE</option>
-                        <option value="de">GERMAN</option>
-                        <option value="it">ITALIAN</option>
-                    </select>
-                    <button class="action" onclick="translateText()">TRANSLATE & SPEAK</button>
-                    <div id="v-result" class="log-box">...</div>
-                </div>
-
-                <div id="vocoder-cam-ui" style="display:none; height:100%;">
-                    <div id="cam-preview" style="position:relative; height:200px; background:#111; margin-bottom:10px; border:1px solid #00f7ff;">
-                        <div style="position:absolute; top:50%; width:100%; text-align:center;">CAMERA OFF</div>
-                    </div>
-                    <button class="action" onclick="scanText()">SCAN IMAGE (OCR)</button>
-                    <div id="ocr-result" class="log-box">Captured text will appear here...</div>
-                </div>
-            `;
-            viewport.appendChild(container);
-
-            // Logic
-            window.vocoderMode = (mode) => {
-                document.getElementById('vocoder-text-ui').style.display = mode === 'text' ? 'block' : 'none';
-                document.getElementById('vocoder-cam-ui').style.display = mode === 'cam' ? 'block' : 'none';
-                if(mode === 'cam') startOCRPreview();
-                else stopOCRPreview();
-            };
-
-            // 1. Text Translation (Using Free API)
-            window.translateText = async () => {
-                const text = document.getElementById('v-input').value;
-                const lang = document.getElementById('v-lang').value;
-                const resBox = document.getElementById('v-result');
-                
-                if(!text) return;
-                resBox.innerText = "UPLINKING TO TRANSLATION SERVER...";
-
-                try {
-                    const req = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${lang}`);
-                    const data = await req.json();
-                    const translation = data.responseData.translatedText;
-                    
-                    resBox.innerText = translation;
-                    
-                    // Speak it
-                    const u = new SpeechSynthesisUtterance(translation);
-                    u.lang = lang; 
-                    speechSynthesis.speak(u);
-                } catch(e) {
-                    resBox.innerText = "CONNECTION FAILED.";
-                }
-            };
-
-            // 2. Camera OCR (Tesseract)
-            let videoEl = null;
-            let streamRef = null;
-
-            window.startOCRPreview = async () => {
-                const prev = document.getElementById('cam-preview');
-                prev.innerHTML = '';
-                const setup = await getCamera(); 
-                if(!setup) return;
-                
-                videoEl = setup.video;
-                streamRef = setup.stream;
-                
-                videoEl.style.position = 'absolute';
-                prev.appendChild(videoEl);
-            };
-
-            window.stopOCRPreview = () => {
-                if(streamRef) streamRef.getTracks().forEach(t => t.stop());
-                if(videoEl) videoEl.remove();
-            };
-
-            window.scanText = async () => {
-                if(!videoEl) return;
-                const resBox = document.getElementById('ocr-result');
-                resBox.innerText = "ANALYZING VISUAL DATA...";
-                
-                // Draw frame to canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = videoEl.videoWidth; 
-                canvas.height = videoEl.videoHeight;
-                canvas.getContext('2d').drawImage(videoEl, 0, 0);
-
-                // Run Tesseract
-                try {
-                    const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                    resBox.innerText = text ? text : "NO TEXT DETECTED";
-                    // Clean up text for speech
-                    if(text) {
-                        const u = new SpeechSynthesisUtterance("Visual data reads: " + text);
-                        speechSynthesis.speak(u);
-                    }
-                } catch(e) {
-                    resBox.innerText = "OCR MODULE FAILURE";
-                }
-            };
-
-            // Cleanup function
-            currentProcess = () => { window.stopOCRPreview(); };
+        async function getCam() {
+            try { return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } 
+            catch(e) { alert("Camera Access Denied"); return null; }
         }
 
-        // ============================================
-        // === APP: DETECTIVE (Object Detection) ===
-        // ============================================
-        async function startDetective() {
-            const setup = await getCamera();
-            if(!setup) return;
-            const { video, stream } = setup;
-
-            const canvas = document.createElement('canvas');
-            viewport.appendChild(canvas);
-            const ctx = canvas.getContext('2d');
-            const model = await cocoSsd.load();
-            let running = true;
-
-            async function loop() {
-                if(!running) return;
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                
-                const preds = await model.detect(video);
-                preds.forEach(p => {
-                    // Batman Styling
-                    let label = p.class.toUpperCase();
-                    let color = "#00f7ff";
-                    if(label === "PERSON") { label = "HUMAN"; color = "#ff3333"; }
-                    if(label === "CELL PHONE") { label = "TECH"; color = "#eebb00"; }
-                    
-                    ctx.strokeStyle = color; ctx.lineWidth = 3;
-                    ctx.strokeRect(p.bbox[0], p.bbox[1], p.bbox[2], p.bbox[3]);
-                    
-                    const textW = ctx.measureText(label).width;
-                    ctx.fillStyle = color; 
-                    ctx.fillRect(p.bbox[0], p.bbox[1]-20, textW+10, 20);
-                    ctx.fillStyle = "black"; ctx.font = "bold 14px Arial";
-                    ctx.fillText(label, p.bbox[0]+5, p.bbox[1]-5);
-                });
-                requestAnimationFrame(loop);
-            }
-            loop();
-
-            currentProcess = () => { running = false; stream.getTracks().forEach(t => t.stop()); video.remove(); canvas.remove(); };
-        }
-
-        // ============================================
-        // === APP: NIGHT VISION / FILTERS ===
-        // ============================================
-        async function startCamera(filter) {
-            const setup = await getCamera();
-            if(!setup) return;
-            setup.video.style.filter = filter;
-            currentProcess = () => { setup.stream.getTracks().forEach(t => t.stop()); setup.video.remove(); };
-        }
-
-        // ============================================
-        // === APP: SONAR (Audio) ===
-        // ============================================
-        async function startSonar() {
-            const canvas = document.createElement('canvas');
-            viewport.appendChild(canvas);
-            const ctx = canvas.getContext('2d');
-            
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const actx = new (window.AudioContext||window.webkitAudioContext)();
-                const src = actx.createMediaStreamSource(stream);
-                const ana = actx.createAnalyser();
-                src.connect(ana);
-                
-                const data = new Uint8Array(ana.frequencyBinCount);
-                let running = true;
-
-                function draw() {
-                    if(!running) return;
-                    ana.getByteFrequencyData(data);
-                    canvas.width = viewport.clientWidth; canvas.height = viewport.clientHeight;
-                    
-                    // Radar Grid
-                    ctx.strokeStyle = "#004444"; ctx.lineWidth=1;
-                    ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, 100, 0, 2*Math.PI); ctx.stroke();
-                    
-                    // Bars
-                    let x = 0; let w = canvas.width / data.length * 2.5;
-                    for(let i=0; i<data.length; i++) {
-                        let h = data[i] * 3;
-                        ctx.fillStyle = `rgba(0, ${255}, 255, ${data[i]/255})`;
-                        ctx.fillRect(x, canvas.height/2 - h/2, w, h);
-                        x += w+1;
-                    }
-                    requestAnimationFrame(draw);
-                }
-                draw();
-                
-                currentProcess = () => { running = false; stream.getTracks().forEach(t => t.stop()); actx.close(); canvas.remove(); };
-            } catch(e) { alert("Mic Access Denied"); }
-        }
-
-        // ============================================
-        // === APP: JAMMER (White Noise) ===
-        // ============================================
-        function startJammer() {
-            const ui = document.createElement('div');
-            ui.className = 'tool-ui';
-            ui.innerHTML = `<button class="action" style="height:200px; border-radius:50%; margin-top:50px;" onclick="toggleNoise()">TOGGLE JAMMER</button><div style="text-align:center; margin-top:20px;">AUDIO MASKING ACTIVE</div>`;
-            viewport.appendChild(ui);
-
-            let actx = null;
-            window.toggleNoise = () => {
-                if(actx) { actx.close(); actx = null; return; }
-                actx = new (window.AudioContext||window.webkitAudioContext)();
-                const node = actx.createScriptProcessor(4096, 1, 1);
-                node.onaudioprocess = e => {
-                    const out = e.outputBuffer.getChannelData(0);
-                    for(let i=0; i<4096; i++) out[i] = Math.random() * 2 - 1;
-                };
-                node.connect(actx.destination);
-            };
-            currentProcess = () => { if(actx) actx.close(); ui.remove(); };
-        }
-
-        // ============================================
-        // === UTILITIES (GPS, Crypto, Status) ===
-        // ============================================
-        function startGPS() {
-            const ui = document.createElement('div');
-            ui.className = 'tool-ui';
-            ui.innerHTML = `<div id="gps-data" class="log-box" style="height:200px; font-size:16px;">ACQUIRING SATELLITES...</div>`;
-            viewport.appendChild(ui);
-            
-            const id = navigator.geolocation.watchPosition(
-                p => { document.getElementById('gps-data').innerHTML = `LAT: ${p.coords.latitude}<br>LON: ${p.coords.longitude}<br>ALT: ${p.coords.altitude||0}m<br>SPD: ${p.coords.speed||0}m/s`; },
-                e => { document.getElementById('gps-data').innerText = "SIGNAL LOST"; },
-                { enableHighAccuracy: true }
-            );
-            currentProcess = () => { navigator.geolocation.clearWatch(id); ui.remove(); };
-        }
-
-        function startCrypto() {
-            const ui = document.createElement('div');
-            ui.className = 'tool-ui';
-            ui.innerHTML = `<textarea id="c-in" placeholder="Input"></textarea><button class="action" onclick="runRot13()">ENCRYPT/DECRYPT</button><textarea id="c-out" readonly placeholder="Output"></textarea>`;
-            viewport.appendChild(ui);
-            window.runRot13 = () => {
-                const s = document.getElementById('c-in').value;
-                document.getElementById('c-out').value = s.replace(/[a-zA-Z]/g,c=>String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+13)?c:c-26));
-            };
-            currentProcess = () => { ui.remove(); };
-        }
-
-        function startFlash() {
-            const bg = document.body;
-            let i = setInterval(() => { bg.style.backgroundColor = bg.style.backgroundColor==='white'?'black':'white'; }, 80);
-            currentProcess = () => { clearInterval(i); bg.style.backgroundColor = 'var(--bg)'; };
-        }
-
-        async function startStatus() {
-            const ui = document.createElement('div');
-            ui.className = 'tool-ui';
-            viewport.appendChild(ui);
-            
-            const update = async () => {
-                let bat = navigator.getBattery ? await navigator.getBattery() : {level:1};
-                ui.innerHTML = `
-                    <div class="log-box">
-                    BATTERY: ${Math.round(bat.level*100)}%<br>
-                    CORES: ${navigator.hardwareConcurrency}<br>
-                    RAM: ${navigator.deviceMemory || '?'} GB<br>
-                    PLATFORM: ${navigator.platform}<br>
-                    AGENT: ${navigator.userAgent}
-                    </div>
-                `;
-            };
-            update();
-            currentProcess = () => { ui.remove(); };
-        }
+        // --- 1. DETECTIVE (Fixed) ---
+        let detThresh = 0.60;
+        function updateThresh(v) { detThresh = v/100; document.getElementById('det-val').innerText = v+"%"; }
         
+        async function initDetective() {
+            const vid = document.getElementById('det-vid');
+            const can = document.getElementById('det-can');
+            const ctx = can.getContext('2d');
+            const model = await cocoSsd.load();
+            stream = await getCam(); vid.srcObject = stream;
+            
+            function detect() {
+                if(!stream) return;
+                can.width = vid.videoWidth; can.height = vid.videoHeight;
+                ctx.clearRect(0,0,can.width,can.height);
+                model.detect(vid).then(preds => {
+                    preds.forEach(p => {
+                        if(p.score < detThresh) return; // Sensitivity Filter
+                        const color = p.class === 'person' ? '#ff3333' : '#00f7ff';
+                        ctx.strokeStyle = color; ctx.lineWidth = 4;
+                        ctx.strokeRect(p.bbox[0], p.bbox[1], p.bbox[2], p.bbox[3]);
+                        ctx.fillStyle = color; ctx.font = "bold 20px Courier New";
+                        ctx.fillText(p.class.toUpperCase() + " " + Math.round(p.score*100)+"%", p.bbox[0], p.bbox[1]-10);
+                    });
+                    loop = requestAnimationFrame(detect);
+                });
+            }
+            detect();
+        }
+
+        // --- 2. VOCODER (Real Translation) ---
+        function startListen() {
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!Recognition) { alert("Speech API not supported"); return; }
+            const rec = new Recognition();
+            rec.lang = 'en-US';
+            rec.onresult = e => { document.getElementById('voc-in').value = e.results[0][0].transcript; };
+            rec.start();
+        }
+
+        async function translateAndSpeak() {
+            const text = document.getElementById('voc-in').value;
+            const target = document.getElementById('voc-lang').value;
+            const out = document.getElementById('voc-out');
+            
+            out.innerText = "TRANSLATING...";
+            
+            try {
+                // Free MyMemory API
+                const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${target}`);
+                const data = await res.json();
+                const transText = data.responseData.translatedText;
+                
+                out.innerText = transText;
+                
+                // Speak
+                const u = new SpeechSynthesisUtterance(transText);
+                u.lang = target;
+                speechSynthesis.speak(u);
+            } catch(e) { out.innerText = "ERROR: " + e.message; }
+        }
+
+        // --- 3. FLASHBANG (Strobe) ---
+        function triggerFlash() {
+            const ol = document.getElementById('flash-overlay');
+            ol.style.display = 'block';
+            let state = true;
+            loop = setInterval(() => {
+                ol.style.background = state ? 'white' : 'black';
+                state = !state;
+            }, 50); // 20Hz Strobe
+        }
+
+        // --- 4. SONAR ---
+        async function initSonar() {
+            const can = document.getElementById('sonar-can');
+            const ctx = can.getContext('2d');
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+            const src = audioCtx.createMediaStreamSource(stream);
+            const ana = audioCtx.createAnalyser();
+            src.connect(ana);
+            const data = new Uint8Array(ana.frequencyBinCount);
+            
+            function draw() {
+                if(!stream) return;
+                ana.getByteFrequencyData(data);
+                can.width = window.innerWidth; can.height = window.innerHeight;
+                ctx.fillStyle="black"; ctx.fillRect(0,0,can.width,can.height);
+                let w = can.width/data.length * 2.5; let x = 0;
+                for(let i=0; i<data.length; i++) {
+                    let h = data[i]*3;
+                    ctx.fillStyle=`rgb(0,${h},255)`;
+                    ctx.fillRect(x, can.height/2 - h/2, w, h);
+                    x+=w+1;
+                }
+                loop = requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // --- 5. QR ---
+        async function initQR() {
+            const vid = document.getElementById('qr-vid');
+            const res = document.getElementById('qr-res');
+            stream = await getCam(); vid.srcObject = stream;
+            const can = document.createElement('canvas');
+            const ctx = can.getContext('2d');
+            function scan() {
+                if(vid.readyState === vid.HAVE_ENOUGH_DATA) {
+                    can.width = vid.videoWidth; can.height = vid.videoHeight;
+                    ctx.drawImage(vid,0,0,can.width,can.height);
+                    const img = ctx.getImageData(0,0,can.width,can.height);
+                    const code = jsQR(img.data, img.width, img.height);
+                    if(code) { res.innerText = code.data; res.style.color = "#00ff00"; }
+                }
+                loop = requestAnimationFrame(scan);
+            }
+            scan();
+        }
+
+        // --- 6. CAM HELPER ---
+        async function initCam(id) { stream = await getCam(); document.getElementById(id).srcObject = stream; }
+
+        // --- 7. GPS ---
+        function initGPS() {
+            watchId = navigator.geolocation.watchPosition(p => {
+                document.getElementById('gps-lat').innerText = p.coords.latitude.toFixed(5);
+                document.getElementById('gps-lon').innerText = p.coords.longitude.toFixed(5);
+                document.getElementById('gps-alt').innerText = (p.coords.altitude||0).toFixed(0)+"m";
+                document.getElementById('gps-spd').innerText = (p.coords.speed||0).toFixed(1)+"m/s";
+                document.getElementById('gps-acc').innerText = (p.coords.accuracy||0).toFixed(0)+"m";
+            }, e => alert("GPS Error"), {enableHighAccuracy:true});
+        }
+
+        // --- 8. LEVEL ---
+        function initLevel() {
+            window.addEventListener('deviceorientation', e => {
+                const x = Math.max(-90, Math.min(90, e.gamma)); 
+                const y = Math.max(-90, Math.min(90, e.beta));
+                document.getElementById('bubble-dot').style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+                document.getElementById('tilt-x').innerText = Math.round(x);
+                document.getElementById('tilt-y').innerText = Math.round(y);
+            });
+        }
+
+        // --- 9. CIPHER ---
+        function doCipher() {
+            const val = document.getElementById('c-in').value;
+            document.getElementById('c-out').value = val.replace(/[a-zA-Z]/g,c=>String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+13)?c:c-26));
+        }
+
+        // --- 10. MORSE ---
+        function txMorse() {
+            const txt = document.getElementById('m-in').value.toLowerCase();
+            const codes = {a:".-",b:"-...",c:"-.-.",d:"-..",e:".",f:"..-.",g:"--.",h:"....",i:"..",j:".---",k:"-.-",l:".-..",m:"--",n:"-.",o:"---",p:".--.",q:"--.-",r:".-.",s:"...",t:"-",u:"..-",v:"...-",w:".--",x:"-..-",y:"-.--",z:"--.."};
+            let seq = [];
+            for(let c of txt) {
+                if(codes[c]) { for(let s of codes[c]) { seq.push(s==='.'?200:600); seq.push(200); } }
+                seq.push(600);
+            }
+            let i=0;
+            function step() {
+                if(i>=seq.length) { document.getElementById('flash-overlay').style.display='none'; return; }
+                document.getElementById('flash-overlay').style.display='block';
+                document.getElementById('flash-overlay').style.background='white';
+                setTimeout(()=>{
+                    document.getElementById('flash-overlay').style.background='black';
+                    setTimeout(step, 200);
+                }, seq[i]);
+                i++;
+            }
+            step();
+        }
+
+        // --- 11. NOISE ---
+        function toggleNoise() {
+            if(audioCtx) { stopHardware(); document.getElementById('noise-btn').innerText="ACTIVATE"; return; }
+            audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+            const node = audioCtx.createScriptProcessor(4096, 1, 1);
+            node.onaudioprocess = e => { let o = e.outputBuffer.getChannelData(0); for(let i=0;i<4096;i++) o[i] = Math.random()*2-1; };
+            node.connect(audioCtx.destination);
+            document.getElementById('noise-btn').innerText="DEACTIVATE";
+        }
+
+        // --- 12. BATTERY ---
+        async function initBat() {
+            if(navigator.getBattery) {
+                const b = await navigator.getBattery();
+                document.getElementById('bat-lvl').innerText = Math.round(b.level*100)+"%";
+                document.getElementById('bat-st').innerText = b.charging ? "CHARGING" : "DISCHARGING";
+            }
+        }
+
+        // --- 13. COMPASS ---
+        function initCompass() {
+            window.addEventListener('deviceorientation', e => {
+                if(e.webkitCompassHeading) document.getElementById('comp-val').innerText = Math.round(e.webkitCompassHeading);
+                else if(e.alpha) document.getElementById('comp-val').innerText = Math.round(360-e.alpha);
+            });
+        }
+
+        // --- 14. SEISMO ---
+        function initSeismo() {
+            window.addEventListener('devicemotion', e => {
+                const acc = e.accelerationIncludingGravity;
+                if(acc) {
+                    const v = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
+                    document.getElementById('seis-val').innerText = v.toFixed(2);
+                }
+            });
+        }
+
+        // --- 15. NETWORK ---
+        function checkNet() {
+            const con = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if(con) {
+                document.getElementById('net-type').innerText = con.effectiveType.toUpperCase();
+                document.getElementById('net-down').innerText = con.downlink + " Mbps";
+                document.getElementById('net-rtt').innerText = con.rtt + " ms";
+            }
+        }
+
+        // --- 16. TIMER ---
+        let tStart = 0;
+        function timerToggle() {
+            if(loop) { clearInterval(loop); loop = null; }
+            else {
+                tStart = Date.now() - (tStart > 0 ? tStart : 0);
+                loop = setInterval(() => {
+                    let d = new Date(Date.now() - tStart);
+                    document.getElementById('timer-val').innerText = d.toISOString().substr(14, 8);
+                }, 10);
+            }
+        }
+        function timerReset() { stopHardware(); tStart=0; document.getElementById('timer-val').innerText="00:00.00"; }
+
+        // --- 19. NOTES ---
+        function saveNote() {
+            const txt = document.getElementById('note-in').value;
+            const ls = JSON.parse(localStorage.getItem('wlogs')||"[]");
+            ls.unshift(new Date().toLocaleTimeString()+": "+txt);
+            localStorage.setItem('wlogs', JSON.stringify(ls));
+            loadNotes();
+        }
+        function loadNotes() {
+            const ls = JSON.parse(localStorage.getItem('wlogs')||"[]");
+            document.getElementById('note-list').innerHTML = ls.map(l=>`<div style="border-bottom:1px solid #333; padding:5px;">${l}</div>`).join('');
+        }
+
     </script>
 </body>
 </html>
