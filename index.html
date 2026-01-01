@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WayneTech Detective Mode</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WayneTech">
+    
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+    <style>
+        /* BATMAN AESTHETIC CSS */
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
+        
+        /* Video & Canvas Layers */
+        #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transform: scaleX(-1); /* Mirror effect for selfie mode if needed, remove if using back cam */ }
+        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; transform: scaleX(-1); }
+
+        /* HUD Overlay */
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+        .hud-header { position: absolute; top: 40px; left: 20px; color: #00f7ff; text-shadow: 0 0 5px #00f7ff; }
+        .hud-header h3 { margin: 0; font-size: 18px; letter-spacing: 2px; }
+        .hud-header small { font-size: 10px; opacity: 0.8; }
+        
+        .loading { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            color: #00f7ff; font-size: 16px; z-index: 4; text-align: center;
+            text-shadow: 0 0 10px #00f7ff;
+        }
+
+        /* Scanline Animation */
+        .scanline {
+            width: 100%; height: 5px; background: rgba(0, 247, 255, 0.3);
+            position: absolute; z-index: 3; animation: scan 2.5s linear infinite; top: 0;
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
+        }
+        @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        /* Vignette for gritty look */
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 60%, black 100%);
+            z-index: 3; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loading" id="status">INITIALIZING SYSTEMS...<br><span style="font-size:10px">ACCESSING SATELLITE FEED</span></div>
+    <div class="scanline"></div>
+    <div class="vignette"></div>
+    
+    <div id="hud">
+        <div class="hud-header">
+            <h3>WAYNETECH // DETECTIVE MODE</h3>
+            <small>V.7.2.0 | ENCRYPTION: ACTIVE</small>
+        </div>
+    </div>
+
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const status = document.getElementById('status');
+        const ctx = canvas.getContext('2d');
+        let model = null;
+
+        // 1. SETUP CAMERA (Back Camera Preferred)
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }, 
+                    audio: false
+                });
+                video.srcObject = stream;
+                return new Promise((resolve) => {
+                    video.onloadedmetadata = () => resolve(video);
+                });
+            } catch (error) {
+                status.innerText = "CAMERA ACCESS DENIED\nCHECK PERMISSIONS";
+                status.style.color = "red";
+            }
+        }
+
+        // 2. LOAD AI MODEL
+        async function loadModel() {
+            model = await cocoSsd.load();
+            status.style.display = 'none'; // Hide loading text
+            detectFrame();
+        }
+
+        // 3. REAL-TIME DETECTION LOOP
+        async function detectFrame() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const predictions = await model.detect(video);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            predictions.forEach(prediction => {
+                // --- BATMAN LOGIC START ---
+                
+                let label = prediction.class.toUpperCase();
+                let color = "#00f7ff"; // Default Cyan
+
+                // Rename Boring Objects
+                if (label === "PERSON") { label = "UNIDENTIFIED SUBJECT"; color = "#ff3333"; } // RED for people
+                else if (label === "CELL PHONE") { label = "DEVICE DETECTED"; }
+                else if (label === "LAPTOP") { label = "MAINFRAME TERMINAL"; }
+                else if (label === "CUP") { label = "UNKNOWN SUBSTANCE"; }
+                else if (label === "KEYBOARD") { label = "INPUT CONSOLE"; }
+                else if (label === "MOUSE") { label = "PERIPHERAL"; }
+                else if (label === "BOTTLE") { label = "LIQUID CONTAINER"; }
+                
+                // Draw Box
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = color;
+                ctx.strokeRect(prediction.bbox[0], prediction.bbox[1], prediction.bbox[2], prediction.bbox[3]);
+
+                // Draw Corner Accents (Tactical Look)
+                const x = prediction.bbox[0];
+                const y = prediction.bbox[1];
+                const w = prediction.bbox[2];
+                const h = prediction.bbox[3];
+                
+                // Draw Label Background
+                ctx.fillStyle = color === "#ff3333" ? "rgba(255, 0, 0, 0.2)" : "rgba(0, 247, 255, 0.2)";
+                ctx.fillRect(x, y - 25, w, 25);
+
+                // Draw Label Text
+                ctx.fillStyle = color;
+                ctx.font = "bold 14px 'Courier New'";
+                ctx.fillText(
+                    label + " [" + Math.round(prediction.score * 100) + "%]",
+                    x + 5,
+                    y - 7
+                );
+                // --- BATMAN LOGIC END ---
+            });
+
+            requestAnimationFrame(detectFrame);
+        }
+
+        // Start System
+        setupCamera().then(() => {
+            status.innerHTML = "LOADING NEURAL NET...<br><span style='font-size:10px'>DECRYPTING ALGORITHMS</span>";
+            loadModel();
+        });
+    </script>
+</body>
+</html>
