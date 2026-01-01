@@ -18,7 +18,12 @@
         /* BATMAN VISUALS */
         body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
         
-        /* Video & Canvas (No Transform = Fixed Navigation) */
+        /* Container for Video & Canvas to make flipping easy */
+        #cam-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        /* The .mirrored class will be toggled by the button */
+        .mirrored { transform: scaleX(-1); }
+
         #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
         #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
 
@@ -28,21 +33,30 @@
         .hud-header h3 { margin: 0; font-size: 18px; letter-spacing: 2px; }
         .hud-header small { font-size: 10px; opacity: 0.8; }
         
+        /* Flip Button (Pointer events enabled so you can click it) */
+        #flip-btn {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            border: 1px solid #00f7ff; background: rgba(0, 0, 0, 0.5); color: #00f7ff;
+            padding: 10px 20px; font-family: 'Courier New', Courier, monospace; font-weight: bold;
+            cursor: pointer; pointer-events: auto; z-index: 10;
+            text-shadow: 0 0 5px #00f7ff; box-shadow: 0 0 10px rgba(0, 247, 255, 0.2);
+        }
+        #flip-btn:active { background: #00f7ff; color: #000; }
+
         .loading { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
             color: #00f7ff; font-size: 16px; z-index: 4; text-align: center;
             text-shadow: 0 0 10px #00f7ff;
         }
 
-        /* Scanline Animation */
         .scanline {
             width: 100%; height: 5px; background: rgba(0, 247, 255, 0.3);
             position: absolute; z-index: 3; animation: scan 2.5s linear infinite; top: 0;
             box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
+            pointer-events: none;
         }
         @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 
-        /* Dark Vignette for "Helmet" feel */
         .vignette {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, transparent 60%, black 100%);
@@ -61,25 +75,33 @@
             <h3>WAYNETECH // DETECTIVE MODE</h3>
             <small>V.7.2.0 | ENCRYPTION: ACTIVE</small>
         </div>
+        <button id="flip-btn" onclick="toggleFlip()">[ FLIP OPTICS ]</button>
     </div>
 
-    <video id="video" playsinline muted autoplay></video>
-    <canvas id="canvas"></canvas>
+    <div id="cam-container">
+        <video id="video" playsinline muted autoplay></video>
+        <canvas id="canvas"></canvas>
+    </div>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const status = document.getElementById('status');
+        const container = document.getElementById('cam-container');
         const ctx = canvas.getContext('2d');
         let model = null;
 
-        // 1. SETUP CAMERA (Fixed Zoom & Navigation)
+        // Toggle Function
+        function toggleFlip() {
+            container.classList.toggle('mirrored');
+        }
+
+        // 1. SETUP CAMERA (Widescreen Request)
         async function setupCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { 
                         facingMode: 'environment',
-                        // Request Widescreen (1080p) to fix the "Zoomed In" look
                         width: { ideal: 1920 },
                         height: { ideal: 1080 } 
                     }, 
@@ -101,13 +123,12 @@
         // 2. LOAD AI MODEL
         async function loadModel() {
             model = await cocoSsd.load();
-            status.style.display = 'none'; // Hide loading text
+            status.style.display = 'none'; 
             detectFrame();
         }
 
-        // 3. REAL-TIME DETECTION LOOP
+        // 3. DETECTION LOOP
         async function detectFrame() {
-            // Match canvas to video resolution
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
@@ -116,67 +137,43 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             predictions.forEach(prediction => {
-                // --- BATMAN LOGIC START ---
-                
+                // --- BATMAN LOGIC ---
                 let rawLabel = prediction.class.toUpperCase();
                 let category = "OBJECT"; 
-                let color = "#00f7ff"; // Default Cyan
+                let color = "#00f7ff"; 
 
-                // Define Categories
                 const animals = ["BIRD", "CAT", "DOG", "HORSE", "SHEEP", "COW", "ELEPHANT", "BEAR", "ZEBRA", "GIRAFFE"];
                 const vehicles = ["BICYCLE", "CAR", "MOTORCYCLE", "AIRPLANE", "BUS", "TRAIN", "TRUCK", "BOAT"];
                 const weapons = ["KNIFE", "SCISSORS", "BASEBALL BAT"];
                 
-                // Logic: Assign Category & Color
-                if (rawLabel === "PERSON") {
-                    category = "HUMAN";
-                    color = "#ff3333"; // Red for Threat
-                } 
-                else if (animals.includes(rawLabel)) {
-                    category = "ANIMAL";
-                    color = "#00ff00"; // Green for Bio
-                }
-                else if (vehicles.includes(rawLabel)) {
-                    category = "VEHICLE";
-                }
-                else if (weapons.includes(rawLabel)) {
-                    category = "WEAPON";
-                    color = "#ff3333"; // Red for Threat
-                }
+                if (rawLabel === "PERSON") { category = "HUMAN"; color = "#ff3333"; } 
+                else if (animals.includes(rawLabel)) { category = "ANIMAL"; color = "#00ff00"; }
+                else if (vehicles.includes(rawLabel)) { category = "VEHICLE"; }
+                else if (weapons.includes(rawLabel)) { category = "WEAPON"; color = "#ff3333"; }
 
-                // Create the Label (e.g., "HUMAN: PERSON")
                 let displayLabel = category + ": " + rawLabel;
 
-                // Draw Box
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = color;
                 ctx.strokeRect(prediction.bbox[0], prediction.bbox[1], prediction.bbox[2], prediction.bbox[3]);
 
-                // Text Background
                 const x = prediction.bbox[0];
                 const y = prediction.bbox[1];
-                const textWidth = ctx.measureText(displayLabel).width; // Dynamic width
+                const textWidth = ctx.measureText(displayLabel).width;
                 
                 ctx.fillStyle = color === "#ff3333" ? "rgba(255, 0, 0, 0.2)" : "rgba(0, 247, 255, 0.2)";
                 ctx.fillRect(x, y - 25, Math.max(textWidth + 60, prediction.bbox[2]), 25);
 
-                // Draw Text
                 ctx.fillStyle = color;
                 ctx.font = "bold 14px 'Courier New'";
-                ctx.fillText(
-                    displayLabel + " [" + Math.round(prediction.score * 100) + "%]",
-                    x + 5,
-                    y - 7
-                );
-                // --- BATMAN LOGIC END ---
+                ctx.fillText(displayLabel + " [" + Math.round(prediction.score * 100) + "%]", x + 5, y - 7);
             });
 
             requestAnimationFrame(detectFrame);
         }
 
-        // Boot Up
         setupCamera().then(() => {
             status.innerHTML = "LOADING NEURAL NET...<br><span style='font-size:10px'>DECRYPTING ALGORITHMS</span>";
             loadModel();
