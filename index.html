@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WayneTech OS v6</title>
+    <title>WayneTech OS v7</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,14 +15,8 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        wayne: '#00f7ff',
-                        alert: '#ff3333',
-                        panel: '#0a0a0a',
-                    },
-                    fontFamily: {
-                        mono: ['Courier New', 'monospace'],
-                    }
+                    colors: { wayne: '#00f7ff', alert: '#ff3333', panel: '#0a0a0a' },
+                    fontFamily: { mono: ['Courier New', 'monospace'] }
                 }
             }
         }
@@ -34,27 +28,14 @@
 
     <style>
         body { background-color: black; color: #00f7ff; overflow: hidden; touch-action: none; }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #00f7ff; border-radius: 5px; }
-        
-        /* CRT Scanline Effect */
         .scanline {
             width: 100%; height: 100%; position: fixed; left: 0; top: 0; pointer-events: none; z-index: 50;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
             background-size: 100% 2px, 3px 100%;
         }
-        
-        /* Night Vision Filter */
-        .nv-filter { filter: sepia(100%) hue-rotate(90deg) contrast(200%) brightness(150%) grayscale(20%); }
-        
-        /* OCR Target Box */
-        .ocr-target {
-            border: 2px solid #00f7ff; box-shadow: 0 0 15px #00f7ff;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; height: 100px; z-index: 20; pointer-events: none;
-        }
-        .ocr-target::after { content: "TARGET TEXT HERE"; position: absolute; top: -20px; left: 0; font-size: 12px; background: black; padding: 2px 5px; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #00f7ff; border-radius: 5px; }
     </style>
 </head>
 <body class="font-mono h-screen w-screen flex flex-col">
@@ -63,42 +44,22 @@
 
     <header class="h-14 flex items-center justify-between px-4 border-b-2 border-wayne bg-black/90 z-40">
         <div class="text-xl font-bold tracking-widest text-wayne drop-shadow-[0_0_5px_rgba(0,247,255,0.8)]">WAYNETECH</div>
-        <div id="clock" class="text-xs text-wayne/70">00:00:00</div>
+        <div id="clock" class="text-xs text-wayne/70">00:00</div>
     </header>
 
     <main id="viewport" class="flex-1 relative bg-black overflow-hidden">
         
         <div id="home" class="screen w-full h-full p-4 grid grid-cols-2 gap-4 overflow-y-auto pb-20">
-            <button onclick="launch('detective')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">👁️</span> <span class="text-xs font-bold">DETECTIVE</span>
-            </button>
-            <button onclick="launch('vocoder')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">🗣️</span> <span class="text-xs font-bold">VOCODER</span>
-            </button>
-            <button onclick="launch('nightvis')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">🌑</span> <span class="text-xs font-bold">NIGHT VIS</span>
-            </button>
-            <button onclick="launch('sonar')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">📡</span> <span class="text-xs font-bold">SONAR</span>
-            </button>
-            <button onclick="launch('logs')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">📝</span> <span class="text-xs font-bold">LOGS</span>
-            </button>
-            <button onclick="launch('units')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">📐</span> <span class="text-xs font-bold">UNITS</span>
-            </button>
-            <button onclick="launch('chrono')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">⏱️</span> <span class="text-xs font-bold">CHRONO</span>
-            </button>
-            <button onclick="launch('rng')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">🎲</span> <span class="text-xs font-bold">RNG</span>
-            </button>
-            <button onclick="launch('tally')" class="flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition">
-                <span class="text-3xl mb-2">🔢</span> <span class="text-xs font-bold">TALLY</span>
-            </button>
-            <button onclick="launch('flash')" class="flex flex-col items-center justify-center p-4 border border-red-500/50 bg-red-900/10 rounded active:bg-red-500 active:text-black transition text-red-500">
-                <span class="text-3xl mb-2">💣</span> <span class="text-xs font-bold">FLASHBANG</span>
-            </button>
+            <button onclick="launch('detective')" class="dash-btn"><span>👁️</span> DETECTIVE</button>
+            <button onclick="launch('vocoder')" class="dash-btn"><span>🗣️</span> VOCODER</button>
+            <button onclick="launch('nightvis')" class="dash-btn"><span>🌑</span> NIGHT VIS</button>
+            <button onclick="launch('sonar')" class="dash-btn"><span>📡</span> SONAR</button>
+            <button onclick="launch('logs')" class="dash-btn"><span>📝</span> LOGS</button>
+            <button onclick="launch('units')" class="dash-btn"><span>📐</span> UNITS</button>
+            <button onclick="launch('chrono')" class="dash-btn"><span>⏱️</span> CHRONO</button>
+            <button onclick="launch('rng')" class="dash-btn"><span>🎲</span> RNG</button>
+            <button onclick="launch('tally')" class="dash-btn"><span>🔢</span> TALLY</button>
+            <button onclick="launch('flash')" class="dash-btn text-red-500 border-red-500/50 bg-red-900/10"><span>💣</span> FLASHBANG</button>
         </div>
 
         <div id="app-detective" class="screen hidden w-full h-full relative">
@@ -107,8 +68,7 @@
             <div class="absolute bottom-5 left-0 w-full px-4 z-20">
                 <div class="bg-black/80 border border-wayne p-2 rounded">
                     <div class="flex justify-between text-xs mb-1">
-                        <span>CONFIDENCE THRESHOLD</span>
-                        <span id="det-val">60%</span>
+                        <span>SENSITIVITY</span> <span id="det-val">60%</span>
                     </div>
                     <input type="range" min="10" max="90" value="60" oninput="updateThresh(this.value)" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                 </div>
@@ -122,50 +82,56 @@
             </div>
 
             <div id="voc-tab-speech" class="flex-1 flex flex-col p-4 space-y-4">
-                <button onclick="startListening()" class="p-6 border-2 border-wayne rounded-full mx-auto mt-4 active:bg-wayne active:text-black transition">
-                    <span class="text-4xl">🎙️</span>
-                </button>
+                <button onclick="startListening()" class="p-6 border-2 border-wayne rounded-full mx-auto mt-4 active:bg-wayne active:text-black transition"><span class="text-4xl">🎙️</span></button>
                 <div class="text-center text-xs opacity-70">TAP TO SPEAK</div>
-                
                 <textarea id="voc-text" class="w-full h-32 bg-gray-900 border border-wayne p-2 text-sm rounded focus:outline-none" placeholder="Detected text..."></textarea>
-                
                 <div class="flex gap-2">
                     <select id="voc-lang" class="bg-gray-900 border border-wayne p-2 text-sm flex-1 rounded">
                         <option value="es-ES">Spanish</option>
                         <option value="fr-FR">French</option>
                         <option value="ja-JP">Japanese</option>
-                        <option value="de-DE">German</option>
-                        <option value="ru-RU">Russian</option>
                     </select>
                     <button onclick="speakTranslation()" class="px-4 py-2 bg-wayne/20 border border-wayne rounded font-bold">SPEAK</button>
                 </div>
             </div>
 
-            <div id="voc-tab-cam" class="hidden flex-1 relative">
-                <video id="voc-vid" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline muted></video>
-                <div class="ocr-target"></div>
-                <div class="absolute bottom-5 w-full px-10">
-                    <button onclick="captureOCR()" class="w-full py-4 bg-wayne text-black font-bold text-lg rounded shadow-[0_0_15px_#00f7ff]">SCAN TARGET AREA</button>
+            <div id="voc-tab-cam" class="hidden flex-1 relative flex flex-col">
+                <div class="relative flex-1 bg-black overflow-hidden">
+                    <video id="voc-vid" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline muted></video>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-24 border-2 border-wayne shadow-[0_0_20px_#00f7ff] z-10 pointer-events-none"></div>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-16 text-xs bg-black px-2">ALIGN TEXT HERE</div>
                 </div>
-                <div id="ocr-result" class="absolute top-5 left-5 right-5 bg-black/90 border border-wayne p-2 text-sm min-h-[50px] z-20">Ready to scan...</div>
+                <div class="h-1/3 bg-gray-900 border-t border-wayne p-4 flex flex-col gap-2">
+                    <div id="ocr-status" class="text-xs text-center text-wayne">READY</div>
+                    <div class="flex gap-2 h-full">
+                        <div id="ocr-preview" class="w-1/3 border border-wayne/50 bg-black"></div> <div class="flex-1 flex flex-col gap-2">
+                            <textarea id="ocr-result" class="flex-1 bg-black border border-wayne p-1 text-xs" placeholder="Result..."></textarea>
+                            <button onclick="captureOCR()" class="py-2 bg-wayne text-black font-bold text-sm">SCAN & TRANSLATE</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div id="app-nightvis" class="screen hidden w-full h-full relative">
-            <video id="nv-vid" class="absolute inset-0 w-full h-full object-cover nv-filter" autoplay playsinline muted></video>
-            <div class="absolute bottom-10 w-full text-center text-wayne font-bold text-xl drop-shadow-md">NIGHT VISION ACTIVE</div>
+            <canvas id="nv-canvas" class="w-full h-full object-cover"></canvas>
+            <video id="nv-vid" class="hidden" autoplay playsinline muted></video>
+            
+            <div class="absolute bottom-5 left-0 w-full px-10">
+                <div class="text-center text-xs mb-1">DIGITAL GAIN (EXPOSURE)</div>
+                <input type="range" min="1" max="5" step="0.5" value="2" id="nv-gain" class="w-full h-2 bg-gray-700 rounded-lg cursor-pointer">
+            </div>
         </div>
 
-        <div id="app-sonar" class="screen hidden w-full h-full relative bg-black">
-            <canvas id="sonar-can" class="w-full h-full"></canvas>
-            <div class="absolute top-4 right-4 text-xs">AUDIO SPECTRUM ANALYZER</div>
+        <div id="app-sonar" class="screen hidden w-full h-full flex flex-col items-center justify-center bg-black relative">
+            <canvas id="sonar-can" class="w-full h-64"></canvas>
+            <div class="absolute bottom-10 text-xs text-wayne tracking-widest animate-pulse">AUDIO WAVEFORM ANALYSIS</div>
         </div>
 
         <div id="app-logs" class="screen hidden w-full h-full flex flex-col p-4">
             <textarea id="log-input" class="w-full h-24 bg-gray-900 border border-wayne p-2 mb-2 rounded" placeholder="Mission entry..."></textarea>
             <button onclick="addLog()" class="w-full py-3 bg-wayne/20 border border-wayne mb-4 font-bold rounded">SAVE LOG</button>
-            <div id="log-list" class="flex-1 overflow-y-auto space-y-2 border-t border-wayne/30 pt-2">
-                </div>
+            <div id="log-list" class="flex-1 overflow-y-auto space-y-2 border-t border-wayne/30 pt-2"></div>
         </div>
 
         <div id="app-units" class="screen hidden w-full h-full flex flex-col p-4 space-y-4">
@@ -212,21 +178,24 @@
     </main>
 
     <nav class="h-16 border-t border-wayne/30 bg-black flex justify-center items-center z-40">
-        <button onclick="goHome()" class="px-8 py-2 bg-wayne/10 border border-wayne text-wayne rounded hover:bg-wayne hover:text-black transition font-bold tracking-widest">
-            MENU
-        </button>
+        <button onclick="goHome()" class="px-8 py-2 bg-wayne/10 border border-wayne text-wayne rounded hover:bg-wayne hover:text-black transition font-bold tracking-widest">MENU</button>
     </nav>
 
     <script>
+        // --- TAILWIND COMPONENT STYLES ---
+        document.querySelectorAll('.dash-btn').forEach(btn => {
+            btn.className = "flex flex-col items-center justify-center p-4 border border-wayne/30 bg-wayne/5 rounded active:bg-wayne active:text-black transition";
+            const span = btn.querySelector('span');
+            span.className = "text-3xl mb-2";
+            btn.innerHTML = span.outerHTML + `<span class="text-xs font-bold">${btn.innerText}</span>`;
+        });
+
         // --- CORE SYSTEM ---
-        let currentStream = null;
+        let stream = null;
         let animationId = null;
         let activeApp = null;
         
-        // Clock
-        setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
-        }, 1000);
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }, 1000);
 
         function goHome() {
             stopHardware();
@@ -236,267 +205,251 @@
         }
 
         function launch(appId) {
-            goHome(); // Clean state
+            goHome();
             document.getElementById('home').classList.add('hidden');
             document.getElementById('app-' + appId).classList.remove('hidden');
             activeApp = appId;
 
             if(appId === 'detective') initDetective();
-            if(appId === 'nightvis') initCamera('nv-vid');
+            if(appId === 'nightvis') initNightVis();
             if(appId === 'sonar') initSonar();
             if(appId === 'vocoder') initVocoderCam();
             if(appId === 'logs') loadLogs();
         }
 
         function stopHardware() {
-            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
+            if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
             if (animationId) { cancelAnimationFrame(animationId); clearInterval(animationId); animationId = null; }
-            const flash = document.getElementById('app-flash');
-            flash.style.backgroundColor = 'white'; // Reset flashbang state
+            document.getElementById('app-flash').style.backgroundColor = 'white';
         }
 
         async function getCamera() {
-            try {
-                return await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
-                });
-            } catch(e) { alert("Camera Denied"); return null; }
+            try { return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } 
+            catch(e) { alert("Camera Access Denied"); return null; }
         }
 
-        // --- 1. DETECTIVE (Fixed Overlay) ---
+        // --- 1. DETECTIVE ---
         let detModel = null;
         let detThresh = 0.60;
-        function updateThresh(val) { detThresh = val / 100; document.getElementById('det-val').innerText = val + '%'; }
-
+        function updateThresh(v) { detThresh = v/100; document.getElementById('det-val').innerText = v+"%"; }
+        
         async function initDetective() {
-            const video = document.getElementById('det-vid');
-            const canvas = document.getElementById('det-can');
-            const ctx = canvas.getContext('2d');
+            const vid = document.getElementById('det-vid');
+            const can = document.getElementById('det-can');
+            const ctx = can.getContext('2d');
+            stream = await getCamera(); if(!stream) return;
+            vid.srcObject = stream;
             
-            const stream = await getCamera();
-            if(!stream) return;
-            video.srcObject = stream;
-            currentStream = stream;
-
             if(!detModel) detModel = await cocoSsd.load();
-
-            async function detect() {
+            
+            async function loop() {
                 if(activeApp !== 'detective') return;
-                
-                // Ensure canvas matches video size exactly
-                if(video.readyState === 4) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    
-                    const preds = await detModel.detect(video);
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+                if(vid.readyState === 4) {
+                    can.width = vid.videoWidth; can.height = vid.videoHeight;
+                    const preds = await detModel.detect(vid);
+                    ctx.clearRect(0,0,can.width,can.height);
                     preds.forEach(p => {
-                        if(p.score < detThresh) return; // Sensitivity check
-
-                        let label = p.class.toUpperCase();
-                        let color = '#00f7ff';
-                        if(label === 'PERSON') { color = '#ff3333'; label = 'HUMAN'; }
-                        if(label === 'CELL PHONE') { color = '#FFFF00'; label = 'TECH'; }
-
-                        ctx.strokeStyle = color;
-                        ctx.lineWidth = 4;
-                        ctx.strokeRect(p.bbox[0], p.bbox[1], p.bbox[2], p.bbox[3]);
-
-                        ctx.fillStyle = color;
-                        ctx.font = 'bold 16px Courier New';
-                        ctx.fillText(`${label} ${Math.round(p.score*100)}%`, p.bbox[0], p.bbox[1] - 5);
+                        if(p.score < detThresh) return;
+                        const color = p.class==='person'?'#ff3333':'#00f7ff';
+                        ctx.strokeStyle = color; ctx.lineWidth=4;
+                        ctx.strokeRect(p.bbox[0],p.bbox[1],p.bbox[2],p.bbox[3]);
+                        ctx.fillStyle=color; ctx.font="bold 18px Courier New";
+                        ctx.fillText(p.class.toUpperCase(), p.bbox[0], p.bbox[1]-5);
                     });
                 }
-                animationId = requestAnimationFrame(detect);
+                animationId = requestAnimationFrame(loop);
             }
-            detect();
+            loop();
         }
 
-        // --- 2. VOCODER (Fixed) ---
-        function vocoderTab(tab) {
+        // --- 2. VOCODER (Fixed OCR & Translation) ---
+        function vocoderTab(t) {
             document.getElementById('voc-tab-speech').classList.add('hidden');
             document.getElementById('voc-tab-cam').classList.add('hidden');
-            document.getElementById('voc-tab-' + tab).classList.remove('hidden');
+            document.getElementById('voc-tab-' + t).classList.remove('hidden');
         }
-
-        // Speech Logic
         function startListening() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if(!SpeechRecognition) { alert("Speech API not supported on this browser."); return; }
-            
-            const rec = new SpeechRecognition();
-            rec.lang = 'en-US';
-            rec.onstart = () => { document.getElementById('voc-text').placeholder = "Listening..."; };
-            rec.onresult = (e) => { document.getElementById('voc-text').value = e.results[0][0].transcript; };
-            rec.start();
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!SR) return alert("No Speech API");
+            const r = new SR();
+            r.lang = 'en-US';
+            r.onresult = e => document.getElementById('voc-text').value = e.results[0][0].transcript;
+            r.start();
         }
-
-        function speakTranslation() {
-            const text = document.getElementById('voc-text').value;
+        async function speakTranslation() {
+            const txt = document.getElementById('voc-text').value;
             const lang = document.getElementById('voc-lang').value;
-            if(!text) return;
-            
-            const u = new SpeechSynthesisUtterance(text); // In a real app, you'd translate text via API here first
+            if(!txt) return;
+            const u = new SpeechSynthesisUtterance(txt);
             u.lang = lang;
             speechSynthesis.speak(u);
         }
 
-        // Cam OCR Logic
+        // CAM OCR LOGIC
         async function initVocoderCam() {
-            const video = document.getElementById('voc-vid');
-            const stream = await getCamera();
-            if(stream) { video.srcObject = stream; currentStream = stream; }
+            const vid = document.getElementById('voc-vid');
+            stream = await getCamera(); if(!stream) return;
+            vid.srcObject = stream;
         }
 
         async function captureOCR() {
-            const video = document.getElementById('voc-vid');
+            const vid = document.getElementById('voc-vid');
+            const status = document.getElementById('ocr-status');
             const res = document.getElementById('ocr-result');
-            res.innerText = "Scanning Target Area...";
+            const prev = document.getElementById('ocr-preview');
             
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            status.innerText = "PROCESSING IMAGE...";
             
-            // Capture full frame
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
+            // 1. Capture & Crop
+            const can = document.createElement('canvas');
+            can.width = vid.videoWidth; can.height = vid.videoHeight;
+            const ctx = can.getContext('2d');
+            ctx.drawImage(vid, 0, 0);
 
-            // CROP THE CENTER (Where the target box is)
-            // We assume target box is roughly 80% width and 100px height centered
-            const cropW = canvas.width * 0.8;
-            const cropH = 100 * (canvas.width / video.clientWidth); // Scale height relative to view
-            const cropX = (canvas.width - cropW) / 2;
-            const cropY = (canvas.height - cropH) / 2;
+            // Calculate center crop (matches the CSS box)
+            const w = can.width * 0.6;
+            const h = can.height * 0.2; 
+            const x = (can.width - w) / 2;
+            const y = (can.height - h) / 2;
 
-            const cropCanvas = document.createElement('canvas');
-            cropCanvas.width = cropW;
-            cropCanvas.height = cropH;
-            cropCanvas.getContext('2d').drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            const cropCan = document.createElement('canvas');
+            cropCan.width = w; cropCan.height = h;
+            const cCtx = cropCan.getContext('2d');
+            
+            // 2. PRE-PROCESS (Grayscale + High Contrast)
+            cCtx.drawImage(can, x, y, w, h, 0, 0, w, h);
+            const imgData = cCtx.getImageData(0, 0, w, h);
+            const d = imgData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                let avg = (d[i] + d[i+1] + d[i+2]) / 3;
+                let c = avg > 100 ? 255 : 0; 
+                d[i] = d[i+1] = d[i+2] = c;
+            }
+            cCtx.putImageData(imgData, 0, 0);
 
-            // Run Tesseract on cropped image
-            Tesseract.recognize(cropCanvas, 'eng')
-                .then(({ data: { text } }) => {
-                    res.innerText = text ? text : "No Text Found";
-                });
+            prev.innerHTML = '';
+            cropCan.style.width = '100%';
+            prev.appendChild(cropCan);
+
+            // 3. Tesseract
+            const { data: { text } } = await Tesseract.recognize(cropCan, 'eng');
+            
+            if(text.trim().length > 0) {
+                res.value = text.trim();
+                status.innerText = "TEXT FOUND";
+                const u = new SpeechSynthesisUtterance(text);
+                speechSynthesis.speak(u);
+            } else {
+                status.innerText = "NO TEXT DETECTED";
+            }
         }
 
-        // --- 3. NIGHT VIS ---
-        async function initCamera(id) {
-            const vid = document.getElementById(id);
-            const stream = await getCamera();
-            if(stream) { vid.srcObject = stream; currentStream = stream; }
+        // --- 3. NIGHT VIS (Gamma Correction) ---
+        async function initNightVis() {
+            const vid = document.getElementById('nv-vid');
+            const can = document.getElementById('nv-canvas');
+            const ctx = can.getContext('2d');
+            stream = await getCamera(); if(!stream) return;
+            vid.srcObject = stream;
+
+            function process() {
+                if(activeApp !== 'nightvis') return;
+                if(vid.readyState === 4) {
+                    can.width = vid.videoWidth; can.height = vid.videoHeight;
+                    ctx.drawImage(vid, 0, 0);
+                    
+                    const frame = ctx.getImageData(0,0,can.width,can.height);
+                    const d = frame.data;
+                    const gain = document.getElementById('nv-gain').value;
+                    
+                    for(let i=0; i<d.length; i+=4) {
+                        const r = d[i], g = d[i+1], b = d[i+2];
+                        const v = (0.2126*r + 0.7152*g + 0.0722*b) * gain;
+                        d[i] = 0;  
+                        d[i+1] = v; 
+                        d[i+2] = 0; 
+                    }
+                    ctx.putImageData(frame, 0, 0);
+                }
+                animationId = requestAnimationFrame(process);
+            }
+            process();
         }
 
-        // --- 4. SONAR ---
+        // --- 4. SONAR (Mirrored) ---
         async function initSonar() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                currentStream = stream;
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const src = ctx.createMediaStreamSource(stream);
-                const ana = ctx.createAnalyser();
-                ana.fftSize = 256;
-                src.connect(ana);
-                
-                const canvas = document.getElementById('sonar-can');
-                const cCtx = canvas.getContext('2d');
+                const s = await navigator.mediaDevices.getUserMedia({audio:true});
+                stream = s;
+                const ac = new (window.AudioContext||window.webkitAudioContext)();
+                const src = ac.createMediaStreamSource(s);
+                const ana = ac.createAnalyser();
+                ana.fftSize = 256; src.connect(ana);
                 const data = new Uint8Array(ana.frequencyBinCount);
+                const can = document.getElementById('sonar-can');
+                const ctx = can.getContext('2d');
 
                 function draw() {
                     if(activeApp !== 'sonar') return;
-                    
-                    // Resize canvas to match display
-                    canvas.width = canvas.clientWidth;
-                    canvas.height = canvas.clientHeight;
-
+                    can.width = can.clientWidth; can.height = can.clientHeight;
                     ana.getByteFrequencyData(data);
                     
-                    cCtx.fillStyle = '#000';
-                    cCtx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = "#000"; ctx.fillRect(0,0,can.width,can.height);
                     
-                    const barWidth = (canvas.width / data.length) * 2.5;
-                    let x = 0;
-
-                    for(let i = 0; i < data.length; i++) {
-                        const barHeight = (data[i] / 255) * canvas.height;
+                    const cx = can.width / 2;
+                    const cy = can.height / 2;
+                    
+                    for(let i=0; i<data.length; i++) {
+                        const h = (data[i]/255) * (can.height/2);
+                        const w = (can.width/2) / data.length;
+                        const x = i * w;
                         
-                        // WayneTech Color Scheme
-                        cCtx.fillStyle = `rgba(0, 247, 255, ${data[i]/255})`;
-                        cCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-                        x += barWidth + 1;
+                        ctx.fillStyle = `rgba(0, 247, 255, ${data[i]/200})`;
+                        
+                        ctx.fillRect(cx + x, cy - h/2, w-1, h);
+                        ctx.fillRect(cx - x - w, cy - h/2, w-1, h);
                     }
                     animationId = requestAnimationFrame(draw);
                 }
                 draw();
-            } catch(e) { alert("Microphone Denied"); }
+            } catch(e) { alert("Mic Denied"); }
         }
 
-        // --- 5. LOGS ---
+        // --- UTILS ---
         function addLog() {
-            const input = document.getElementById('log-input');
-            if(!input.value) return;
-            const logs = JSON.parse(localStorage.getItem('wayne_logs') || '[]');
-            logs.unshift(`${new Date().toLocaleTimeString()}: ${input.value}`);
-            localStorage.setItem('wayne_logs', JSON.stringify(logs));
-            input.value = '';
-            loadLogs();
+            const i = document.getElementById('log-input');
+            if(!i.value) return;
+            const l = document.getElementById('log-list');
+            l.innerHTML = `<div class="p-2 border-b border-wayne/30 text-xs text-wayne">${new Date().toLocaleTimeString()}: ${i.value}</div>` + l.innerHTML;
+            i.value = "";
         }
-        function loadLogs() {
-            const list = document.getElementById('log-list');
-            const logs = JSON.parse(localStorage.getItem('wayne_logs') || '[]');
-            list.innerHTML = logs.map(l => `<div class="p-2 border-b border-wayne/30 text-xs">${l}</div>`).join('');
-        }
-
-        // --- 6. UNITS ---
-        function convertUnits(type) {
+        function convertUnits(t) {
             const m = document.getElementById('unit-m');
             const ft = document.getElementById('unit-ft');
-            if(type === 'm') ft.value = (m.value * 3.28084).toFixed(2);
-            else m.value = (ft.value / 3.28084).toFixed(2);
+            if(t==='m') ft.value = (m.value*3.28).toFixed(2);
+            else m.value = (ft.value/3.28).toFixed(2);
         }
-
-        // --- 7. CHRONO ---
-        let chronoStart = 0;
-        let chronoInt = null;
+        let cInt; let cSt=0;
         function toggleChrono() {
-            if(chronoInt) { clearInterval(chronoInt); chronoInt = null; }
+            if(cInt) { clearInterval(cInt); cInt=null; }
             else {
-                chronoStart = Date.now() - (chronoStart > 0 ? chronoStart : 0);
-                chronoInt = setInterval(() => {
-                    const d = new Date(Date.now() - chronoStart);
-                    document.getElementById('chrono-display').innerText = d.toISOString().substr(14, 8);
-                }, 10);
-                animationId = chronoInt; // Hijack this var for cleanup
+                cSt = Date.now() - (cSt>0?cSt:0);
+                cInt = setInterval(()=>{ document.getElementById('chrono-display').innerText = new Date(Date.now()-cSt).toISOString().substr(14,8); },10);
+                animationId = cInt;
             }
         }
-        function resetChrono() {
-            clearInterval(chronoInt); chronoInt = null; chronoStart = 0;
-            document.getElementById('chrono-display').innerText = "00:00.00";
+        function resetChrono() { clearInterval(cInt); cInt=null; cSt=0; document.getElementById('chrono-display').innerText="00:00.00"; }
+        function roll(m) { document.getElementById('rng-display').innerText = Math.floor(Math.random()*m)+1; }
+        function flipCoin() { document.getElementById('rng-display').innerText = Math.random()>.5?"HEADS":"TAILS"; }
+        function updateTally(n) { 
+            const el=document.getElementById('tally-val'); 
+            el.innerText = n===0 ? 0 : parseInt(el.innerText)+n; 
         }
-
-        // --- 8. RNG ---
-        function roll(max) { document.getElementById('rng-display').innerText = Math.floor(Math.random()*max)+1; }
-        function flipCoin() { document.getElementById('rng-display').innerText = Math.random()>0.5 ? "HEADS" : "TAILS"; }
-
-        // --- 9. TALLY ---
-        function updateTally(n) {
-            const el = document.getElementById('tally-val');
-            if(n === 0) el.innerText = 0;
-            else el.innerText = parseInt(el.innerText) + n;
-        }
-
-        // --- 10. FLASHBANG ---
         function toggleStrobe() {
             const el = document.getElementById('app-flash');
-            if(animationId) { clearInterval(animationId); animationId = null; el.style.backgroundColor = 'white'; }
-            else {
-                animationId = setInterval(() => {
-                    el.style.backgroundColor = el.style.backgroundColor === 'white' ? 'black' : 'white';
-                }, 50);
-            }
+            if(animationId) { clearInterval(animationId); animationId=null; el.style.backgroundColor='white'; }
+            else { animationId = setInterval(()=>{ el.style.backgroundColor=el.style.backgroundColor==='white'?'black':'white'; }, 50); }
         }
-
     </script>
 </body>
 </html>
