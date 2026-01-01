@@ -3,77 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WayneTech Detective Mode</title>
+    <title>WayneTech Detective Mode (MediaPipe)</title>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="WayneTech">
-    
     <link rel="apple-touch-icon" href="icon.png">
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-
     <style>
-        /* BATMAN VISUALS */
         body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
         
-        /* Container for Video & Canvas to make flipping easy */
         #cam-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        
-        /* The .mirrored class will be toggled by the button */
         .mirrored { transform: scaleX(-1); }
 
         #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
         #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
 
-        /* HUD Overlay */
         #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
         .hud-header { position: absolute; top: 40px; left: 20px; color: #00f7ff; text-shadow: 0 0 5px #00f7ff; }
-        .hud-header h3 { margin: 0; font-size: 18px; letter-spacing: 2px; }
-        .hud-header small { font-size: 10px; opacity: 0.8; }
         
-        /* Flip Button (Pointer events enabled so you can click it) */
         #flip-btn {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             border: 1px solid #00f7ff; background: rgba(0, 0, 0, 0.5); color: #00f7ff;
             padding: 10px 20px; font-family: 'Courier New', Courier, monospace; font-weight: bold;
             cursor: pointer; pointer-events: auto; z-index: 10;
-            text-shadow: 0 0 5px #00f7ff; box-shadow: 0 0 10px rgba(0, 247, 255, 0.2);
         }
-        #flip-btn:active { background: #00f7ff; color: #000; }
 
         .loading { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            color: #00f7ff; font-size: 16px; z-index: 4; text-align: center;
-            text-shadow: 0 0 10px #00f7ff;
+            color: #00f7ff; font-size: 16px; z-index: 4; text-align: center; text-shadow: 0 0 10px #00f7ff;
         }
-
+        
         .scanline {
             width: 100%; height: 5px; background: rgba(0, 247, 255, 0.3);
             position: absolute; z-index: 3; animation: scan 2.5s linear infinite; top: 0;
-            box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
             pointer-events: none;
         }
         @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-
+        
         .vignette {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, transparent 60%, black 100%);
             z-index: 3; pointer-events: none;
         }
     </style>
+    
+    <script type="module">
+        import {
+            ObjectDetector,
+            FilesetResolver
+        } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2";
+
+        let objectDetector;
+        let runningMode = "VIDEO";
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+        const flipBtn = document.getElementById('flip-btn');
+        const container = document.getElementById('cam-container');
+        let lastVideoTime = -1;
+
+        // --- INIT MEDIAPIPE ---
+        const initializeObjectDetector = async () => {
+            status.innerHTML = "LOADING SYSTEMS...<br><span style='font-size:10px'>DOWNLOADING WASM KERNELS</span>";
+            
+            const vision = await FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm"
+            );
+            
+            objectDetector = await ObjectDetector.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
+                    delegate: "GPU" // FORCE GPU ACCELERATION
+                },
+                scoreThreshold: 0.5, // 50% Confidence required
+                runningMode: runningMode
+            });
+            
+            status.style.display = "none";
+            setupCamera();
+        };
+
+        // --- CAMERA SETUP ---
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 } 
+                    }
+                });
+                video.srcObject = stream;
+                video.addEventListener("loadeddata", predictWebcam);
+            } catch (err) {
+                status.style.display = "block";
+                status.innerText = "CAMERA ERROR";
+            }
+        }
+
+        // --- DETECTION LOOP ---
+        async function predictWebcam() {
+            let startTimeMs = performance.now();
+
+            if (video.currentTime !== lastVideoTime) {
+                lastVideoTime = video.currentTime;
+                
+                // DETECT
+                const detections = objectDetector.detectForVideo(video, startTimeMs).detections;
+                
+                // DRAW
+                drawResults(detections);
+            }
+            window.requestAnimationFrame(predictWebcam);
+        }
+
+        function drawResults(detections) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (const detection of detections) {
+                // Get Label & Score
+                const score = Math.round(detection.categories[0].score * 100);
+                let rawLabel = detection.categories[0].categoryName.toUpperCase();
+                const box = detection.boundingBox;
+
+                // --- BATMAN LOGIC START ---
+                let category = "OBJECT";
+                let color = "#00f7ff"; // Cyan
+
+                // Patches for dumb AI
+                if (rawLabel === "TV") rawLabel = "DISPLAY SCREEN";
+                if (rawLabel === "MOUSE") rawLabel = "CONTROLLER";
+                if (rawLabel === "TOILET") continue; // Skip
+
+                // Categorization
+                const animals = ["BIRD", "CAT", "DOG", "HORSE", "SHEEP", "COW", "ELEPHANT", "BEAR", "ZEBRA", "GIRAFFE"];
+                const vehicles = ["BICYCLE", "CAR", "MOTORCYCLE", "AIRPLANE", "BUS", "TRAIN", "TRUCK", "BOAT"];
+                const weapons = ["KNIFE", "SCISSORS", "BASEBALL BAT"];
+
+                if (rawLabel === "PERSON") { category = "HUMAN"; color = "#ff3333"; }
+                else if (animals.includes(rawLabel)) { category = "ANIMAL"; color = "#00ff00"; }
+                else if (vehicles.includes(rawLabel)) { category = "VEHICLE"; }
+                else if (weapons.includes(rawLabel)) { category = "WEAPON"; color = "#ff3333"; }
+                else if (rawLabel === "CELL PHONE" || rawLabel === "LAPTOP" || rawLabel === "DISPLAY SCREEN") { category = "TECH"; color = "#eebb00"; }
+
+                let displayLabel = category + ": " + rawLabel;
+
+                // Drawing
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = color;
+                ctx.strokeRect(box.originX, box.originY, box.width, box.height);
+
+                // Text Background
+                const textWidth = ctx.measureText(displayLabel).width;
+                ctx.fillStyle = color === "#ff3333" ? "rgba(255, 0, 0, 0.3)" : "rgba(0, 247, 255, 0.2)";
+                ctx.fillRect(box.originX, box.originY - 25, textWidth + 60, 25);
+
+                // Text
+                ctx.fillStyle = color;
+                ctx.font = "bold 16px 'Courier New'";
+                ctx.fillText(displayLabel + " [" + score + "%]", box.originX + 5, box.originY - 7);
+            }
+        }
+
+        // Global functions for HTML buttons
+        window.toggleFlip = function() {
+            container.classList.toggle('mirrored');
+        }
+
+        // START
+        initializeObjectDetector();
+    </script>
 </head>
 <body>
-
-    <div class="loading" id="status">INITIALIZING SYSTEMS...<br><span style="font-size:10px">ACCESSING SATELLITE FEED</span></div>
+    <div class="loading" id="status">INITIALIZING SYSTEMS...</div>
     <div class="scanline"></div>
     <div class="vignette"></div>
     
     <div id="hud">
         <div class="hud-header">
             <h3>WAYNETECH // DETECTIVE MODE</h3>
-            <small>V.7.2.0 | ENCRYPTION: ACTIVE</small>
+            <small>SYSTEM: EFFICIENTDET-LITE | GPU: ACTIVE</small>
         </div>
         <button id="flip-btn" onclick="toggleFlip()">[ FLIP OPTICS ]</button>
     </div>
@@ -82,102 +197,5 @@
         <video id="video" playsinline muted autoplay></video>
         <canvas id="canvas"></canvas>
     </div>
-
-    <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const status = document.getElementById('status');
-        const container = document.getElementById('cam-container');
-        const ctx = canvas.getContext('2d');
-        let model = null;
-
-        // Toggle Function
-        function toggleFlip() {
-            container.classList.toggle('mirrored');
-        }
-
-        // 1. SETUP CAMERA (Widescreen Request)
-        async function setupCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 } 
-                    }, 
-                    audio: false
-                });
-                video.srcObject = stream;
-                return new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        video.play();
-                        resolve(video);
-                    };
-                });
-            } catch (error) {
-                status.innerText = "CAMERA ACCESS DENIED\nCHECK PERMISSIONS";
-                status.style.color = "red";
-            }
-        }
-
-        // 2. LOAD AI MODEL
-        async function loadModel() {
-            model = await cocoSsd.load();
-            status.style.display = 'none'; 
-            detectFrame();
-        }
-
-        // 3. DETECTION LOOP
-        async function detectFrame() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-
-            const predictions = await model.detect(video);
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            predictions.forEach(prediction => {
-                // --- BATMAN LOGIC ---
-                let rawLabel = prediction.class.toUpperCase();
-                let category = "OBJECT"; 
-                let color = "#00f7ff"; 
-
-                const animals = ["BIRD", "CAT", "DOG", "HORSE", "SHEEP", "COW", "ELEPHANT", "BEAR", "ZEBRA", "GIRAFFE"];
-                const vehicles = ["BICYCLE", "CAR", "MOTORCYCLE", "AIRPLANE", "BUS", "TRAIN", "TRUCK", "BOAT"];
-                const weapons = ["KNIFE", "SCISSORS", "BASEBALL BAT"];
-                
-                if (rawLabel === "PERSON") { category = "HUMAN"; color = "#ff3333"; } 
-                else if (animals.includes(rawLabel)) { category = "ANIMAL"; color = "#00ff00"; }
-                else if (vehicles.includes(rawLabel)) { category = "VEHICLE"; }
-                else if (weapons.includes(rawLabel)) { category = "WEAPON"; color = "#ff3333"; }
-
-                let displayLabel = category + ": " + rawLabel;
-
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = color;
-                ctx.strokeRect(prediction.bbox[0], prediction.bbox[1], prediction.bbox[2], prediction.bbox[3]);
-
-                const x = prediction.bbox[0];
-                const y = prediction.bbox[1];
-                const textWidth = ctx.measureText(displayLabel).width;
-                
-                ctx.fillStyle = color === "#ff3333" ? "rgba(255, 0, 0, 0.2)" : "rgba(0, 247, 255, 0.2)";
-                ctx.fillRect(x, y - 25, Math.max(textWidth + 60, prediction.bbox[2]), 25);
-
-                ctx.fillStyle = color;
-                ctx.font = "bold 14px 'Courier New'";
-                ctx.fillText(displayLabel + " [" + Math.round(prediction.score * 100) + "%]", x + 5, y - 7);
-            });
-
-            requestAnimationFrame(detectFrame);
-        }
-
-        setupCamera().then(() => {
-            status.innerHTML = "LOADING NEURAL NET...<br><span style='font-size:10px'>DECRYPTING ALGORITHMS</span>";
-            loadModel();
-        });
-    </script>
 </body>
 </html>
